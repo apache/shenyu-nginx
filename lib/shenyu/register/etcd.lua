@@ -117,9 +117,12 @@ local function fetch_shenyu_instances(conf)
     local _revision = _M.revision
     local shenyu_instances = _M.shenyu_instances
 
-    local server_list = {}
     local kvs = json.decode(res.body).kvs
+    if not kvs then
+        return false
+    end
 
+    local server_list = {}
     for _, kv in pairs(kvs) do
         local ver = tonumber(kv.mod_revision)
         if _revision < ver then
@@ -205,20 +208,22 @@ local function watch(premature, watching)
     end
 
     if not watching then
-        local conf, err = parse_base_url(_M.etcd_base_url)
-        if not conf then
-            log(ERR, err)
-            return err
+        if not _M.etcd_conf then
+            local conf, err = parse_base_url(_M.etcd_base_url)
+            if not conf then
+                log(ERR, err)
+                return err
+            end
+            _M.etcd_conf = conf
         end
 
-        local ok, err = fetch_shenyu_instances(conf)
+        local ok, err = fetch_shenyu_instances(_M.etcd_conf)
         if not ok then
             log(ERR, err)
             _M.time_at = 3
         else
             watching = true
         end
-        _M.etcd_conf = conf
     else
         local conf = _M.etcd_conf
         local httpc = http.new()
