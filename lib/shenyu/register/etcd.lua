@@ -119,7 +119,7 @@ local function fetch_shenyu_instances(conf)
 
     local kvs = json.decode(res.body).kvs
     if not kvs then
-        return false
+        return nil, "get the empty shenyu instances from etcd."
     end
 
     local server_list = {}
@@ -136,6 +136,10 @@ local function fetch_shenyu_instances(conf)
 
     _M.revision = _revision + 1
     _M.shenyu_instances = shenyu_instances
+
+    local _servers = json.encode(server_list)
+    _M.storage:set("server_list", _servers)
+    _M.storage:set("revision", _M.revision)
 
     _M.balancer:init(server_list)
     return true
@@ -195,10 +199,43 @@ local function parse_watch_response(response_body)
         end
         log(INFO, "updated upstream nodes successful.")
 
+        local _servers = json.encode(server_list)
+        _M.storage:set("server_list", _servers)
+        _M.storage:set("revision", _M.revision)
+
         _M.balancer:init(server_list)
 
         _M.revision = _revision + 1
         _M.shenyu_instances = shenyu_instances
+    end
+end
+
+local function sync(premature)
+    if premature or ngx_worker_exiting() then
+        return
+    end
+
+    local time_at = 1
+    local storage = _M.storage
+
+    local lock = storage:get("_lock")
+    local ver = storage:get("revision")
+
+    if lock and ver > _M.revision then
+        local server_list = storage:get("server_list")
+        local servers = json.decode(server_list)
+        if _M.revision <= 1 then
+            _M.balancer:init(servers)
+        else
+            _M.balancer:reinit(servers)
+        end
+        time_at = 0
+        _M.revision = ver
+    end
+
+    local ok, err = ngx_timer_at(time_at, sync)
+    if not ok then
+        log(ERR, "failed to start sync ", err)
     end
 end
 
@@ -209,6 +246,8 @@ local function watch(premature, watching)
 
     if not watching then
         if not _M.etcd_conf then
+            _M.storage:set("_lock", false)
+
             local conf, err = parse_base_url(_M.etcd_base_url)
             if not conf then
                 log(ERR, err)
@@ -223,6 +262,7 @@ local function watch(premature, watching)
             _M.time_at = 3
         else
             watching = true
+            _M.storage:set("_lock", true)
         end
     else
         local conf = _M.etcd_conf
@@ -286,7 +326,7 @@ local function watch(premature, watching)
         until not buffer
         local ok, err = httpc:set_keepalive()
         if not ok then
-            ngx.say("failed to set keepalive: ", err)
+            log(ERR, "failed to set keepalive: ", err)
         end
     end
 
@@ -303,18 +343,24 @@ end
 --   etcd_base_url = "http://127.0.0.1:2379",
 -- }
 function _M.init(conf)
-    if ngx.worker.id() ~= 0 then
+    _M.storage = conf.shenyu_storage
+    _M.balancer = balancer.new(conf.balancer_type)
+
+    if ngx.worker.id() == 0 then
+        _M.shenyu_instances = {}
+        _M.etcd_base_url = conf.etcd_base_url
+
+        -- Start the etcd watcher
+        local ok, err = ngx_timer_at(0, watch)
+        if not ok then
+            log(ERR, "failed to start watch: " .. err)
+        end
         return
     end
 
-    _M.shenyu_instances = {}
-    _M.etcd_base_url = conf.etcd_base_url
-    _M.balancer = balancer.new(conf.balancer_type)
-
-    -- Start the etcd watcher
-    local ok, err = ngx_timer_at(0, watch)
+    local ok, err = ngx_timer_at(2, sync)
     if not ok then
-        log(ERR, "failed to start watch: " .. err)
+        log(ERR, "failed to start sync ", err)
     end
 end
 
