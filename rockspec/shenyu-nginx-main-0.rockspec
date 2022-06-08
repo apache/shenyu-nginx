@@ -22,6 +22,7 @@ build = {
    modules = {
       ["shenyu.register.etcd"] = "lib/shenyu/register/etcd.lua",
       ["shenyu.register.balancer"] = "lib/shenyu/register/balancer.lua",
+      ["shenyu.consul.consul"] = "lib/shenyu/register/consul.lua",
    }
 }
 
