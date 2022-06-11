@@ -27,7 +27,7 @@ local _M = {}
 
 _M._VERSION="0.1"
 
-function _M:sync()
+local function sync()
     local httpc = http.new()   
 
     local resp, err = httpc:request_uri(_M.uri, {
@@ -39,8 +39,6 @@ function _M:sync()
     local kvs = json.decode(resp.body)
     local upstreams = {}
     for i, v in ipairs(kvs) do
-        log(ERR, v.ServiceAddress)
-        log(ERR, v.ServicePort)
         upstreams[i] = {ip=v.ServiceAddress, port=v.ServicePort}
     end
     _M.storage:set("server_list",  json.encode(upstreams))
@@ -67,7 +65,7 @@ function _M.init(conf)
     _M.storage = conf.shenyu_storage
 
     if 0 == ngx.worker.id() then
-        local ok, err = new_timer(5, _M:sync())
+        local ok, err = new_timer(5, sync)
         if not ok then
             log(ERR, "failed to create timer: ", err)
             return
