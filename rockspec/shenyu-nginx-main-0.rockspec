@@ -21,8 +21,8 @@ build = {
    type = "builtin",
    modules = {
       ["shenyu.register.etcd"] = "lib/shenyu/register/etcd.lua",
+      ["shenyu.register.nacos"] = "lib/shenyu/register/nacos.lua",
       ["shenyu.register.balancer"] = "lib/shenyu/register/balancer.lua",
       ["shenyu.consul.consul"] = "lib/shenyu/register/consul.lua",
    }
 }
-
