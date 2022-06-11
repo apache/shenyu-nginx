@@ -55,7 +55,7 @@ Finally, restart OpenResty.
 openresty -s reload
 ```
 
-Here provides a completed [example](https://github.com/apache/incubator-shenyu-nginx/blob/main/example/nginx.conf).
+Here provides a completed [example](https://github.com/apache/incubator-shenyu-nginx/tree/main/example).
 
 ## Contributor and Support
 
