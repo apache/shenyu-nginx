@@ -14,32 +14,23 @@
 -- See the License for the specific language governing permissions and
 -- limitations under the License.
 --
-local zk_cluster = require("shenyu.register.zookeeper.zk_cluster")
-local ngx_timer_at = ngx.timer.at
 
-local zc
 local _M = {}
-local function sync(premature)
-   local ok ,err =  zc:connect()
---    if ok then
---     local co, err =  coroutine.create(zc:heartbeat())
---         if co then
---             coroutine.resume(co)
---         end
---    end
-  print("......")
-  local data ,err =  zc:get_children("/shenyu/registry");
-  print("......")
-end
 
-local function asyn_ping()
-    -- body
-    zc:heartbeat()
+-- XID
 
-end
+_M.XID_PING = -2
 
-function _M.init()
-    zc = zk_cluster:newInst({ servers = {"127.0.0.1:2181"} })
-    ngx_timer_at(2,sync)
-end
+_M.XID_SET_WATCHES = -8
+
+--op code
+
+_M.ZOO_GET_CHILDREN = 8;
+
+_M.ZOO_PING_OP = 11
+
+_M.ZOO_SET_WATCHES = 101
+
+_M.ZOO_ADD_WATCH = 106;
+
 return _M

@@ -14,12 +14,16 @@
 -- See the License for the specific language governing permissions and
 -- limitations under the License.
 --
-local string                    = require("shenyu.register.core.string")
+local str                    = require("shenyu.register.core.string")
 local _M                        = {}
 
 --分隔字符串
 function _M.paras_host(host, delimiter)
-    return string.split(host, delimiter);
+    return str.split(host, delimiter);
+end
+
+function _M.long_to_hex_string(long)
+   return string.format("0X%06X",long)
 end
 
 -- table长度

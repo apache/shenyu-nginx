@@ -13,15 +13,15 @@
 -- WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 -- See the License for the specific language governing permissions and
 -- limitations un
-local zkclient              = require("shenyu.register.zookeeper.zk_client")
-local util                  = require("shenyu.register.core.utils")
-local ngx_log               = ngx.log
-local ipairs                = ipairs
-local _M                    = {}
-local mt                    = {__index = _M}
-local timeout               = 60 * 1000
-local table_len             = util.tlen
-local connects              = {}
+local zkclient = require("shenyu.register.zookeeper.zk_client")
+local util = require("shenyu.register.core.utils")
+local ngx_log = ngx.log
+local ipairs = ipairs
+local _M = {}
+local mt = {__index = _M}
+local timeout = 60 * 1000
+local table_len = util.tlen
+local connects = {}
 
 function _M.newInst(self, zkconfig)
     -- body
@@ -38,18 +38,44 @@ function _M.connect(self)
     if not conn then
         ngx_log(ngx.ERR, "初始化zkClient失败" .. err)
     end
+    conn:set_timeout(self.timeout)
     for _, _host in ipairs(servers) do
-        ngx_log(ngx.INFO, "连接 zookeeper host : " .. _host)
+        ngx_log(ngx.INFO, "尝试连接 zookeeper host : " .. _host)
         local ok, err = conn:connect(_host)
         if not ok then
-            ngx_log(ngx.INFO, "尝试连接 zookeeper 失败 host : " .. _host .. err)
+            ngx_log(ngx.INFO, "连接 zookeeper 失败 host : " .. _host .. err)
         else
+            ngx_log(ngx.INFO, "连接 zookeeper 成功 host : " .. _host)
             self.conn = conn
             return conn
         end
     end
     ngx_log(ngx.ERR, "连接 zookeeper 失败")
     return nil
+end
+
+function _M.heartbeat(self)
+    -- body
+    local ok, err = self.conn:keepalive()
+    if err then
+        -- 发生了错误
+        print("发送错误了......")
+    end
+end
+
+function _M.get_children(self, path)
+   local conn =  self.conn
+   if not conn then
+    ngx_log(ngx.ERR,"conn not initialized")
+   end
+   local data, error = conn:get_children(path)
+   if not data then
+    return nil, error
+   end
+   for _, value in ipairs(data) do
+    print("value:" .. value)
+   end
+   return data,nil
 end
 
 return _M
