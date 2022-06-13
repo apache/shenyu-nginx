@@ -46,3 +46,26 @@ jobs:
           if [[ $status -ne 200 ]]; then
             exit 1
           fi
+
+  nacos:
+      runs-on: ubuntu-latest
+      timeout-minutes: 20
+      steps:
+        - uses: actions/checkout@v3
+          with:
+            submodules: true
+        - name: run testcase
+          run: |
+            set -x
+            docker-compose -f ./test/it/case/nacos/docker-compose.yml run -d consumer --build
+            status=$(docker wait $(docker ps -qa --filter Name=nacos_consumer))
+            if [[ $status -ne 200 ]]; then
+              docker-compose -f ./test/it/case/nacos/docker-compose.yml logs
+            fi
+            docker logs $(docker ps -qa --filter Name=nacos_consumer)
+            docker-compose -f ./test/it/case/nacos/docker-compose.yml kill
+            docker-compose -f ./test/it/case/nacos/docker-compose.yml rm -f
+            if [[ $status -ne 200 ]]; then
+              exit 1
+            fi
+

@@ -53,24 +53,14 @@ local function login(username, password)
     return json.decode(res.body).accessToken
 end
 
-local function get_server_list(serviceName, groupName, namespaceId, clusters)
-    if not namespaceId then
-        namespaceId = ""
-    end
-    if not groupName then
-        groupName = ""
-    end
-    if not clusters then
-        clusters = ""
-    end
-
+local function get_server_list(service_name, group_name, namespace_id, clusters)
     local server_list = {}
     local res, err = httpc:request_uri(nacos_base, {
         method = "GET",
         path = "/nacos/v1/ns/instance/list",
-        query = "serviceName=" .. serviceName ..
-                "&groupName=" .. groupName ..
-                "&namespaceId=" .. namespaceId ..
+        query = "serviceName=" .. service_name ..
+                "&groupName=" .. group_name ..
+                "&namespaceId=" .. namespace_id ..
                 "&clusters=" .. clusters ..
                 "&healthOnly=true",
         headers = {
@@ -79,7 +69,8 @@ local function get_server_list(serviceName, groupName, namespaceId, clusters)
     })
 
     if not res then
-        return nil, nil, err
+        log(ERR, "failed to get server list from nacos.", err)
+        return
     end
 
     if res.status == 200 then
@@ -93,7 +84,8 @@ local function get_server_list(serviceName, groupName, namespaceId, clusters)
 
         return server_list, list_inst_resp.lastRefTime
     end
-    return nil, nil, res.body
+    log(ERR, res.body)
+    return
 end
 
 -- conf = {
@@ -112,6 +104,20 @@ function _M.init(conf)
     if ngx.worker.id() == 0 then
         _M.shenyu_instances = {}
         _M.nacos_base_url = conf.nacos_base_url
+
+        _M.namespace = conf.namespace
+        _M.group_name = conf.group_name
+        _M.cluster_name = conf.cluster_name
+        _M.service_name = conf.service_name
+        if not conf.namespace then
+            _M.namespace = "DEFAULT"
+        end
+        if not conf.group_name then
+            _M.group_name = "DEFAULT_GROUP"
+        end
+        if not conf.service_name then
+            _M.service_name = "shenyu-instances"
+        end
 
         -- subscribed by polling, privileged
         local ok, err = ngx_timer_at(0, subscribe)
@@ -141,9 +147,8 @@ local function subscribe(premature, initialized)
         end
         _M.access_token = token
 
-        local server_list, revision, err = get_server_list(_M.service_name, _M.group_name, _M.namespace, _M.clusters)
+        local server_list, revision = get_server_list(_M.service_name, _M.group_name, _M.namespace, _M.clusters)
         if not server_list then
-            log(ERR, "", err)
             goto continue
         end
         local servers_length = server_list["_length_"]
@@ -159,9 +164,8 @@ local function subscribe(premature, initialized)
 
         initialized = true
     else
-        local server_list, revision, err = get_server_list(_M.service_name, _M.group_name, _M.namespace, _M.clusters)
+        local server_list, revision = get_server_list(_M.service_name, _M.group_name, _M.namespace, _M.clusters)
         if not server_list then
-            log(ERR, "", err)
             goto continue
         end
 
@@ -222,7 +226,7 @@ local function sync(premature)
 
     local ok, err = ngx_timer_at(2, sync)
     if not ok then
-        log(ERR, "failed to start sync ", err)
+        log(ERR, "failed to start sync: ", err)
     end
 end
 
