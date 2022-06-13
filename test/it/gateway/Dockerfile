@@ -20,8 +20,5 @@ WORKDIR /shenyu-nginx
 
 COPY ./lib lib
 COPY ./rockspec rockspec
-COPY ./test/it/gateway/conf/nginx.conf conf/nginx.conf
 
 RUN luarocks make ./rockspec/shenyu-nginx-main-0.rockspec
-
-ENTRYPOINT openresty -c /shenyu-nginx/conf/nginx.conf

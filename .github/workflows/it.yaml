@@ -32,15 +32,12 @@ jobs:
       - uses: actions/checkout@v3
         with:
           submodules: true
-      - uses: actions/setup-java@v1
-        with:
-          java-version: 8
       - run: |
-          docker-compose -f ./test/it/docker-compose.yml run -d consumer
+          docker-compose -f ./test/it/case/etcd/docker-compose.yml run -d consumer
           docker wait $(docker ps -qa --filter Name=it_consumer)
           status="$?"
-          docker-compose -f ./test/it/docker-compose.yml logs
+          docker-compose -f ./test/it/case/etcd/docker-compose.yml logs
           if [ $status -eq 0 ]; then
-            docker-compose -f test/it/docker-compose.yml logs consumer
+            docker-compose -f test/it/case/etcd/docker-compose.yml logs consumer
           fi
-          docker-compose -f ./test/it/docker-compose.yml kill
+          docker-compose -f ./test/it/case/etcd/docker-compose.yml kill

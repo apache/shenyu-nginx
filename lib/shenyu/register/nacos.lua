@@ -36,6 +36,7 @@ local INFO = ngx.INFO
 _M.access_token = nil
 
 local function login(username, password)
+    local httpc = http.new()
     local res, err = httpc:request_uri(nacos_base, {
         method = "POST",
         path = "/nacos/v1/auth/login",
@@ -156,7 +157,7 @@ local function subscribe(premature, initialized)
         _M.storage:set("server_list", server_list_in_json)
         _M.storage:set("revision", revision)
 
-        initialized = false
+        initialized = true
     else
         local server_list, revision, err = get_server_list(_M.service_name, _M.group_name, _M.namespace, _M.clusters)
         if not server_list then
@@ -181,7 +182,7 @@ local function subscribe(premature, initialized)
         end
 
         if not updated then
-            goto contiue
+            goto continue
         end
 
         _M.balancer:reinit(server_list)
@@ -211,7 +212,7 @@ local function sync(premature)
     if ver > _M.revision then
         local server_list = storage:get("server_list")
         local servers = json.decode(server_list)
-        if _M.revision <= 1 then
+        if _M.revision < 1 then
             _M.balancer:init(servers)
         else
             _M.balancer:reinit(servers)
