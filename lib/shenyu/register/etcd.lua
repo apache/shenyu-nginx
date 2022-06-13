@@ -221,7 +221,7 @@ local function sync(premature)
     local lock = storage:get("_lock")
     local ver = storage:get("revision")
 
-    if lock and ver > _M.revision then
+    if not lock and ver > _M.revision then
         local server_list = storage:get("server_list")
         local servers = json.decode(server_list)
         if _M.revision <= 1 then
@@ -246,7 +246,7 @@ local function watch(premature, watching)
 
     if not watching then
         if not _M.etcd_conf then
-            _M.storage:set("_lock", false)
+            _M.storage:set("_lock", true)
 
             local conf, err = parse_base_url(_M.etcd_base_url)
             if not conf then
@@ -262,7 +262,7 @@ local function watch(premature, watching)
             _M.time_at = 3
         else
             watching = true
-            _M.storage:set("_lock", true)
+            _M.storage:set("_lock", false)
         end
     else
         local conf = _M.etcd_conf

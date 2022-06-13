@@ -18,10 +18,11 @@
 
 # 1: url, 2: condition, 3: message
 send() {
+  echo "send request to $1"
   curl -s -D ./head -o response $1
   rst=$(grep "$2" ./head)
   if [[ -z "rst" ]]; then
-    echo $s
+    echo "send $1 error: $3"
     cat ./head
     cat ./response
     exit 100
@@ -30,11 +31,13 @@ send() {
 
 register() {
   inst=$1
-  inst_addr=$(curl -s http://${inst}:9090/get)
+  echo "${inst} registering..."
+  inst_addr=$(curl -s http://${inst}:9090/register)
   if [[ -z "$inst_addr" ]]; then
     echo "failed to start ${inst}."
     exit 129
   fi
+  echo "${inst} registered."
 }
 
 register "instance1"
@@ -47,12 +50,14 @@ send "http://gateway:8080/get" "HTTP/1.1 200" "failed to register instance2 to e
 
 sleep 5
 
-curl -s http://gateway:8080/get
 send "http://gateway:8080/get" "HTTP/1.1 200" "shenyu nginx module did not work."
 
 inst1=$(curl -s http://gateway:8080/get)
 inst2=$(curl -s http://gateway:8080/get)
-[[ "$inst1" == "$inst2" ]] || (echo "validation failed" && exit 128)
+if [[ "$inst1" == "$inst2" ]]; then
+  echo "validation failed, inst1: ${inst1}, inst2: ${inst2}"
+  exit 128
+fi
 
 # remove instance 1
 send "http://instance1:9090/unregister" "HTTP/1.1 200" "failed to unregister instance1 to etcd."
@@ -73,3 +78,5 @@ if [[ "$rst" == "$inst_addr_1" ]]; then
 fi
 
 echo "validation successful"
+
+exit 200
