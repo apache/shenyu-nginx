@@ -74,7 +74,6 @@ local function get_server_list()
     if res.status == 200 then
         local server_list = {}
         local list_inst_resp = json.decode(res.body)
-        log(INFO, list_inst_resp.name)
 
         local hosts = list_inst_resp.hosts
         if not hosts then
@@ -82,7 +81,8 @@ local function get_server_list()
         end
 
         for _, inst in pairs(hosts) do
-            server_list[inst.instanceId] = inst.weight
+            local key = inst.ip .. ":" .. inst.port
+            server_list[key] = inst.weight
         end
 
         return server_list, list_inst_resp.lastRefTime, #hosts
@@ -108,10 +108,10 @@ local function subscribe(premature, initialized)
         if not server_list or servers_length == 0 then
             goto continue
         end
-        _M.servers_length = servers_length
 
         _M.balancer:init(server_list)
         _M.revision = revision
+        _M.servers_length = servers_length
 
         local server_list_in_json = json.encode(server_list)
         log(INFO, "initialize upstream: " .. server_list_in_json .. " , revision: " .. revision)
@@ -121,15 +121,12 @@ local function subscribe(premature, initialized)
 
         initialized = true
     else
-        local server_list, revision = get_server_list()
+        local server_list, revision, servers_length = get_server_list()
         if not server_list or servers_length == 0 then
             goto continue
         end
 
         local updated = true
-        local servers_length = server_list["_length_"]
-        server_list["_length_"] = nil
-
         if _M.servers_length == servers_length then
             local services = _M.server_list
             for srv, weight in pairs(server_list) do
@@ -177,13 +174,15 @@ local function sync(premature)
         local servers = json.decode(server_list)
         if _M.revision < 1 then
             _M.balancer:init(servers)
+            log(INFO, "initialize upstream in workers, upstream: " .. server_list)
         else
             _M.balancer:reinit(servers)
+            log(INFO, "update upstream in workers, upstream: " .. server_list)
         end
         _M.revision = ver
     end
 
-    local ok, err = ngx_timer_at(2, sync)
+    local ok, err = ngx_timer_at(1, sync)
     if not ok then
         log(ERR, "failed to start sync: ", err)
     end
@@ -203,7 +202,6 @@ function _M.init(conf)
     _M.storage = conf.shenyu_storage
     _M.balancer = balancer.new(conf.balancer_type)
 
-    _M.storage:set("revision", 0)
     _M.revision = 0
 
     if ngx.worker.id() == 0 then
@@ -229,6 +227,7 @@ function _M.init(conf)
         end
 
         _M.server_list = {}
+        _M.storage:set("revision", 0)
 
         -- subscribed by polling, privileged
         local ok, err = ngx_timer_at(0, subscribe)
