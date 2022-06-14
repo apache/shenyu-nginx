@@ -32,8 +32,8 @@ services:
       timeout: 60s
       retries: 120
     networks:
-      shenyu:
-        ipv4_address: 172.16.238.10
+      shenyu-nacos:
+        ipv4_address: 172.16.236.10
 
   instance1:
     build:
@@ -42,7 +42,7 @@ services:
       - 9090
     environment:
       - APP_NAME=mock-shenyu-instance-1
-      - NACOS_SERVER_URL=http://172.16.238.10:2379
+      - NACOS_SERVER_URL=http://172.16.236.10:8848
     volumes:
       - ./conf/mock-shenyu.conf:/var/run/nginx.conf
     entrypoint: ["openresty", "-c", "/var/run/nginx.conf"]
@@ -56,8 +56,8 @@ services:
       nacos:
         condition: service_healthy
     networks:
-      shenyu:
-        ipv4_address: 172.16.238.11
+      shenyu-nacos:
+        ipv4_address: 172.16.236.11
 
   instance2:
     build:
@@ -66,7 +66,7 @@ services:
       - 9090
     environment:
       - APP_NAME=mock-shenyu-instance-2
-      - NACOS_SERVER_URL=http://172.16.238.10:2379
+      - NACOS_SERVER_URL=http://172.16.236.10:8848
     volumes:
       - ./conf/mock-shenyu.conf:/var/run/nginx.conf
     entrypoint: ["openresty", "-c", "/var/run/nginx.conf"]
@@ -80,15 +80,15 @@ services:
       nacos:
         condition: service_healthy
     networks:
-      shenyu:
-        ipv4_address: 172.16.238.12
+      shenyu-nacos:
+        ipv4_address: 172.16.236.12
 
   gateway:
     build:
       context: ../../../..
       dockerfile: ./test/it/gateway/Dockerfile
     environment:
-      - NACOS_SERVER_URL=http://172.16.238.10:2379
+      - NACOS_SERVER_URL=http://172.16.236.10:8848
     volumes:
       - ./conf/gateway.conf:/var/run/nginx.conf
     entrypoint: ["openresty", "-c", "/var/run/nginx.conf"]
@@ -102,8 +102,8 @@ services:
       nacos:
         condition: service_healthy
     networks:
-      shenyu:
-        ipv4_address: 172.16.238.13
+      shenyu-nacos:
+        ipv4_address: 172.16.236.13
 
   consumer:
     build:
@@ -117,14 +117,14 @@ services:
       instance2:
         condition: service_healthy
     networks:
-      shenyu:
-        ipv4_address: 172.16.238.20
+      shenyu-nacos:
+        ipv4_address: 172.16.236.20
 
 networks:
-  shenyu:
+  shenyu-nacos:
     driver: bridge
     ipam:
       driver: default
       config:
-        - subnet: 172.16.238.0/24
-          gateway: 172.16.238.1
+        - subnet: 172.16.236.0/24
+          gateway: 172.16.236.1

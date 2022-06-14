@@ -35,12 +35,12 @@ local INFO = ngx.INFO
 
 _M.access_token = nil
 
-local function login(username, password)
+local function login()
     local httpc = http.new()
-    local res, err = httpc:request_uri(nacos_base, {
+    local res, err = httpc:request_uri(_M.nacos_base_url, {
         method = "POST",
         path = "/nacos/v1/auth/login",
-        query = "username=" .. username .. "&password=" .. password,
+        query = "username=" .. _M.username .. "&password=" .. _M.password,
     })
     if not res then
         return nil, err
@@ -50,88 +50,45 @@ local function login(username, password)
         return nil, res.body
     end
 
+    log(INFO, "login nacos in username: '" .. _M.username .. "' successfully.")
     return json.decode(res.body).accessToken
 end
 
-local function get_server_list(service_name, group_name, namespace_id, clusters)
-    local server_list = {}
-    local res, err = httpc:request_uri(nacos_base, {
+local function get_server_list()
+    local httpc = http.new()
+    local res, err = httpc:request_uri(_M.nacos_base_url, {
         method = "GET",
         path = "/nacos/v1/ns/instance/list",
-        query = "serviceName=" .. service_name ..
-                "&groupName=" .. group_name ..
-                "&namespaceId=" .. namespace_id ..
-                "&clusters=" .. clusters ..
-                "&healthOnly=true",
-        headers = {
-            ["accessToken"] = _M.access_token,
-        }
+        query = "serviceName=" .. _M.service_name
+                .. "&groupName=" .. _M.group_name
+                .. "&namespaceId=" .. _M.namespace
+                .. "&clusters=" .. _M.clusters
+                .. "&healthOnly=true"
+                .. "accessToken=" .. _M.access_token
     })
-
     if not res then
-        log(ERR, "failed to get server list from nacos.", err)
+        log(ERR, "failed to get server list from nacos. ", err)
         return
     end
 
     if res.status == 200 then
-        local list_inst_resp = json.encode(res.body)
+        local server_list = {}
+        local list_inst_resp = json.decode(res.body)
+        log(INFO, list_inst_resp.name)
 
         local hosts = list_inst_resp.hosts
-        for inst in pairs(hosts) do
+        if not hosts then
+            return {}, 0, 0
+        end
+
+        for _, inst in pairs(hosts) do
             server_list[inst.instanceId] = inst.weight
         end
-        server_list["_length_"] = #hosts
 
-        return server_list, list_inst_resp.lastRefTime
+        return server_list, list_inst_resp.lastRefTime, #hosts
     end
     log(ERR, res.body)
     return
-end
-
--- conf = {
---   balance_type = "chash",
---   nacos_base_url = "http://127.0.0.1:8848",
---   username = "nacos",
---   password = "nacos",
---   namespace = "",
---   service_name = "",
---   group_name = "",
--- }
-function _M.init(conf)
-    _M.storage = conf.shenyu_storage
-    _M.balancer = balancer.new(conf.balancer_type)
-
-    if ngx.worker.id() == 0 then
-        _M.shenyu_instances = {}
-        _M.nacos_base_url = conf.nacos_base_url
-
-        _M.namespace = conf.namespace
-        _M.group_name = conf.group_name
-        _M.cluster_name = conf.cluster_name
-        _M.service_name = conf.service_name
-        if not conf.namespace then
-            _M.namespace = "DEFAULT"
-        end
-        if not conf.group_name then
-            _M.group_name = "DEFAULT_GROUP"
-        end
-        if not conf.service_name then
-            _M.service_name = "shenyu-instances"
-        end
-
-        -- subscribed by polling, privileged
-        local ok, err = ngx_timer_at(0, subscribe)
-        if not ok then
-            log(ERR, "failed to start watch: " .. err)
-        end
-        return
-    end
-
-    -- synchronize server_list from privileged processor to workers
-    local ok, err = ngx_timer_at(2, sync)
-    if not ok then
-        log(ERR, "failed to start sync ", err)
-    end
 end
 
 local function subscribe(premature, initialized)
@@ -140,36 +97,36 @@ local function subscribe(premature, initialized)
     end
 
     if not initialized then
-        local token, err = login(_M.username, _M.password)
+        local token, err = login()
         if not token then
             log(ERR, err)
             goto continue
         end
         _M.access_token = token
 
-        local server_list, revision = get_server_list(_M.service_name, _M.group_name, _M.namespace, _M.clusters)
-        if not server_list then
+        local server_list, revision, servers_length = get_server_list()
+        if not server_list or servers_length == 0 then
             goto continue
         end
-        local servers_length = server_list["_length_"]
-        server_list["_length_"] = nil
         _M.servers_length = servers_length
 
         _M.balancer:init(server_list)
         _M.revision = revision
 
         local server_list_in_json = json.encode(server_list)
+        log(INFO, "initialize upstream: " .. server_list_in_json .. " , revision: " .. revision)
+
         _M.storage:set("server_list", server_list_in_json)
         _M.storage:set("revision", revision)
 
         initialized = true
     else
-        local server_list, revision = get_server_list(_M.service_name, _M.group_name, _M.namespace, _M.clusters)
-        if not server_list then
+        local server_list, revision = get_server_list()
+        if not server_list or servers_length == 0 then
             goto continue
         end
 
-        local updated = false
+        local updated = true
         local servers_length = server_list["_length_"]
         server_list["_length_"] = nil
 
@@ -177,12 +134,10 @@ local function subscribe(premature, initialized)
             local services = _M.server_list
             for srv, weight in pairs(server_list) do
                 if services[srv] ~= weight then
-                    updated = true
                     break
                 end
             end
-        else
-            updated = true
+            updated = false
         end
 
         if not updated then
@@ -191,10 +146,14 @@ local function subscribe(premature, initialized)
 
         _M.balancer:reinit(server_list)
         _M.revision = revision
+        _M.server_list = server_list
 
         local server_list_in_json = json.encode(server_list)
+        log(INFO, "update upstream: " .. server_list_in_json .. " , revision: " .. revision)
+
         _M.storage:set("server_list", server_list_in_json)
         _M.storage:set("revision", revision)
+        _M.servers_length = servers_length
     end
 
     :: continue ::
@@ -227,6 +186,62 @@ local function sync(premature)
     local ok, err = ngx_timer_at(2, sync)
     if not ok then
         log(ERR, "failed to start sync: ", err)
+    end
+end
+
+-- conf = {
+--   balance_type = "chash",
+--   nacos_base_url = "http://127.0.0.1:8848",
+--   username = "nacos",
+--   password = "nacos",
+--   namespace = "",
+--   service_name = "",
+--   group_name = "",
+--   clusters = "",
+-- }
+function _M.init(conf)
+    _M.storage = conf.shenyu_storage
+    _M.balancer = balancer.new(conf.balancer_type)
+
+    _M.storage:set("revision", 0)
+    _M.revision = 0
+
+    if ngx.worker.id() == 0 then
+        _M.nacos_base_url = conf.nacos_base_url
+        _M.username = conf.username
+        _M.password = conf.password
+        _M.namespace = conf.namespace
+        _M.group_name = conf.group_name
+        _M.service_name = conf.service_name
+        _M.clusters = conf.clusters
+
+        if not conf.clusters then
+            _M.clusters = ""
+        end
+        if not conf.namespace then
+            _M.namespace = ""
+        end
+        if not conf.group_name then
+            _M.group_name = "DEFAULT_GROUP"
+        end
+        if not conf.service_name then
+            _M.service_name = "shenyu-instances"
+        end
+
+        _M.server_list = {}
+
+        -- subscribed by polling, privileged
+        local ok, err = ngx_timer_at(0, subscribe)
+        if not ok then
+            log(ERR, "failed to start watch: " .. err)
+        end
+        return
+    end
+
+    -- synchronize server_list from privileged processor to workers
+    local ok, err = ngx_timer_at(2, sync)
+    if not ok then
+        log(ERR, "failed to start sync ", err)
     end
 end
 

@@ -40,10 +40,12 @@ register() {
   echo "${inst} registered."
 }
 
+send "http://gateway:8080/get" "HTTP/1.1 500" "failed to set new environment for testing."
+
 register "instance1"
 register "instance2"
 
-send "http://gateway:8080/get" "HTTP/1.1 500" "failed to set new environment for testing."
+sleep 5
 
 send "http://gateway:8080/get" "HTTP/1.1 200" "failed to register instance1 to etcd."
 send "http://gateway:8080/get" "HTTP/1.1 200" "failed to register instance2 to etcd."
