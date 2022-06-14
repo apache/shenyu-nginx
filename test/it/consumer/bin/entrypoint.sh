@@ -47,13 +47,12 @@ register "instance2"
 
 sleep 5
 
-send "http://gateway:8080/get" "HTTP/1.1 200" "failed to register instance1 to etcd."
-send "http://gateway:8080/get" "HTTP/1.1 200" "failed to register instance2 to etcd."
-
-sleep 5
+send "http://instance1:9090/get" "HTTP/1.1 200" "failed to request instance1."
+send "http://instance2:9090/get" "HTTP/1.1 200" "failed to request instance2."
 
 send "http://gateway:8080/get" "HTTP/1.1 200" "shenyu nginx module did not work."
 
+echo "send requests to gateway."
 inst1=$(curl -s http://gateway:8080/get)
 inst2=$(curl -s http://gateway:8080/get)
 if [[ "$inst1" == "$inst2" ]]; then
@@ -62,7 +61,7 @@ if [[ "$inst1" == "$inst2" ]]; then
 fi
 
 # remove instance 1
-send "http://instance1:9090/unregister" "HTTP/1.1 200" "failed to unregister instance1 to etcd."
+send "http://instance1:9090/unregister" "HTTP/1.1 200" "failed to unregister instance1 to register center."
 
 sleep 5
 
