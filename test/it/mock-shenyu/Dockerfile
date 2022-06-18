@@ -17,6 +17,3 @@
 FROM openresty/openresty:1.17.8.2-5-alpine-fat
 
 RUN luarocks install lua-resty-http
-COPY ./conf/nginx.conf /conf/nginx.conf
-
-ENTRYPOINT openresty -c /conf/nginx.conf

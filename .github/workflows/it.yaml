@@ -25,6 +25,28 @@ on:
       - 'v*'
 
 jobs:
+  nacos:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          submodules: true
+      - name: run testcase
+        run: |
+          set -x
+          docker-compose -f ./test/it/case/nacos/docker-compose.yml run -d consumer --build
+          status=$(docker wait $(docker ps -qa --filter Name=nacos_consumer))
+          if [[ $status -ne 200 ]]; then
+            docker-compose -f ./test/it/case/nacos/docker-compose.yml logs
+          fi
+          docker logs $(docker ps -qa --filter Name=nacos_consumer)
+          docker-compose -f ./test/it/case/nacos/docker-compose.yml kill
+          docker-compose -f ./test/it/case/nacos/docker-compose.yml rm -f
+          if [[ $status -ne 200 ]]; then
+            exit 1
+          fi
+
   etcd:
     runs-on: ubuntu-latest
     timeout-minutes: 20
@@ -32,15 +54,17 @@ jobs:
       - uses: actions/checkout@v3
         with:
           submodules: true
-      - uses: actions/setup-java@v1
-        with:
-          java-version: 8
-      - run: |
-          docker-compose -f ./test/it/docker-compose.yml run -d consumer
-          docker wait $(docker ps -qa --filter Name=it_consumer)
-          status="$?"
-          docker-compose -f ./test/it/docker-compose.yml logs
-          if [ $status -eq 0 ]; then
-            docker-compose -f test/it/docker-compose.yml logs consumer
+      - name: run testcase
+        run: |
+          set -x
+          docker-compose -f ./test/it/case/etcd/docker-compose.yml run -d consumer --build
+          status=$(docker wait $(docker ps -qa --filter Name=etcd_consumer))
+          if [[ $status -ne 200 ]]; then
+            docker-compose -f ./test/it/case/etcd/docker-compose.yml logs
           fi
-          docker-compose -f ./test/it/docker-compose.yml kill
+          docker logs $(docker ps -qa --filter Name=etcd_consumer)
+          docker-compose -f ./test/it/case/etcd/docker-compose.yml kill
+          docker-compose -f ./test/it/case/etcd/docker-compose.yml rm -f
+          if [[ $status -ne 200 ]]; then
+            exit 1
+          fi
