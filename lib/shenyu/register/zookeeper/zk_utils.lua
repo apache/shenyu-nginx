@@ -21,15 +21,15 @@ local zc
 local _M = {}
 local function sync(premature)
    local ok ,err =  zc:connect()
---    if ok then
---     local co, err =  coroutine.create(zc:heartbeat())
---         if co then
---             coroutine.resume(co)
---         end
---    end
+    --if ok then
+    -- local co, err =  coroutine.create(zc:heartbeat())
+    --     if co then
+    --         coroutine.resume(co)
+    --     end
+    --end
   print("......")
-  local data ,err =  zc:get_children("/shenyu/registry");
-  print("......")
+  local data ,err =  zc:add_watch("/shenyu/registry");
+  print("......".. data)
 end
 
 local function asyn_ping()

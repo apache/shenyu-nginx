@@ -164,6 +164,14 @@ local function unpack_strings(str)
 end
 
 function _M.get_children(self, path)
+    local d, e = self:_get_children(path)
+    if not d then
+        return d.path
+    end
+    return nil, e
+end
+
+function _M._get_children(self, path)
     local sock = self.sock
     if not sock then
         return nil, "not initialized"
@@ -179,7 +187,13 @@ function _M.get_children(self, path)
         if strlen(bytes) > 16 then
             local xid, zxid, err, count = unpack(">ilii", bytes)
             self.xid = xid + 1
-            return unpack_strings(strsub(bytes, 21))
+            local paths = unpack_strings(strsub(bytes, 21))
+            return {
+                xid = xid,
+                zxid = zxid,
+                count = count,
+                path = paths
+            }
         end
     else
         return nil, "get_children error"
@@ -193,11 +207,25 @@ function _M.add_watch(self, path)
     if not sock then
         return nil, "not initialized"
     end
+    local d, e = self:_get_children(path)
+    if e then
+        return d, e
+    end
+    print("监听的zxid" .. d.zxid)
+    local zxid = d.zxid
     local path_len = strlen(path)
-    local h_len = 12 + path_len + 4
-    -- hlen,xid,opcode,"","",path,
-    local req = unpack(">iiiic" .. path_len .. "i", h_len, const.XID_SET_WATCHES, const.ZOO_SET_WATCHES, path_len, path, 0)
-
+    local h_len = 20 + 4 + 0 + 4 + 0 + 4 + path_len
+    --[len,xid,opcode,zxid,dw_len,dw,ew_len,ew,cw_len,cw]
+    --[int,int,int,long,int,string,int,string,int string]
+    --i,i,i,l,i,c[len],i,c[len],i,c[len]
+    local req = pack(">iiilic0ic0ic" .. path_len, h_len, const.XID_SET_WATCHES, const.ZOO_SET_WATCHES, zxid, 0, "", 0, "", path_len, path)
+    print("发送请求了.....")
+    local bytes, err = self:_send(req)
+    if not bytes then
+        print(err)
+    end
+    
+    print("监听成功")
 end
 
 function _M._close(self)

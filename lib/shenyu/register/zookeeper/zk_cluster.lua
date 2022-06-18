@@ -78,4 +78,13 @@ function _M.get_children(self, path)
    return data,nil
 end
 
+function _M.add_watch(self,path)
+    local conn =  self.conn
+    if not conn then
+        ngx_log(ngx.ERR,"conn not initialized")
+    end
+   local data, err =  conn:add_watch(path)
+    return data,err
+end
+
 return _M
