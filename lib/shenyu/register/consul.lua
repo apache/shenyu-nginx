@@ -17,7 +17,9 @@
 
 local http = require("resty.http")
 local json = require("cjson")
-local balancer = require("ngx.balancer")
+local ngx_balancer = require("ngx.balancer")
+
+local balancer = require("shenyu.register.balancer")
 
 local new_timer = ngx.timer.at
 local log = ngx.log
@@ -38,23 +40,19 @@ local function sync()
 
     local kvs = json.decode(resp.body)
     local upstreams = {}
+
     for i, v in ipairs(kvs) do
-        upstreams[i] = {ip=v.ServiceAddress, port=v.ServicePort}
+        local instanceId = ""
+        instanceId = instanceId .. v.ServiceAddress .. ":" .. v.ServicePort
+        upstreams[instanceId] = 1
     end
-    _M.storage:set("server_list",  json.encode(upstreams))
+    _M.balancer:init(upstreams)
 
 end
 
-function _M:get_server_list()
-    local upstreams_str = _M.storage:get("server_list");
-    local tmp_upstreams = json.decode(upstreams_str);
-    return tmp_upstreams;
-end
-
-function _M:pick_and_set_peer()
-    local tmp_upstreams = _M.get_server_list();
-    local ip_port = tmp_upstreams[math.random(1, table.getn(tmp_upstreams))];
-    balancer.set_current_peer(ip_port.ip, ip_port.port);
+function _M:pick_and_set_peer(key)
+    local server = _M.balancer:find(key)
+    ngx_balancer.set_current_peer(server);
 end
 
 
@@ -63,7 +61,7 @@ function _M.init(conf)
     _M.uri = conf.uri
     _M.path = conf.path
     _M.storage = conf.shenyu_storage
-
+    _M.balancer = balancer.new(conf.balancer_type)
     if 0 == ngx.worker.id() then
         local ok, err = new_timer(5, sync)
         if not ok then
