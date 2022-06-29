@@ -21,26 +21,30 @@ local ngx_log = ngx.log
 local zc;
 local _M = {}
 
-local function watch(path)
-    xpcall(zc:add_watch(path, function(f)
-        for i, v in ipairs(f) do
-            print("拿到数据了"..v)
-        end
-    end), function(err)
-        ngx_log(ngx.ERR, err)
-    end)
-end
-
-local function sync(self, premature)
+local function watch(premature, path)
+    print("一个好好的path" .. path)
     local ok, err = zc:connect()
     if ok then
-        watch("/shenyu/registry")
+        ok, err = xpcall(zc:add_watch(path, function(f)
+            for i, v in ipairs(f) do
+                print("拿到数据了" .. v)
+            end
+        end), function(err)
+            ngx_log(ngx.ERR, "zookeeper start watch error..." .. tostring(err))
+        end)
     end
-    print("......")
+    return ok, err
 end
 
-function _M.init()
-    zc = zk_cluster:new({ servers = { "127.0.0.1:2181" } })
-    ngx_timer_at(2, sync)
+function _M.init(config)
+    zc = zk_cluster:new(config)
+    if ngx.worker.id() == 0 then
+        -- Start the zookeeper watcher
+        local ok, err = ngx_timer_at(2, watch, config.watch_path)
+        if not ok then
+            ngx_log(ERR, "failed to start watch: " .. err)
+        end
+        return
+    end
 end
 return _M

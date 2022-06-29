@@ -20,6 +20,14 @@ local unpack = struct.unpack
 
 local _M = {}
 
+local _base = {
+    new = function(self, o)
+        o = o or {}
+        setmetatable(o, self)
+        return o
+    end
+}
+
 REQUEST_HEADER = {
     xid = 0,
     type = 0,
@@ -36,9 +44,16 @@ REQUEST_HEADER = {
     end
 }
 
-RSP_HEAD = {
-    len = 0,
-    xid = 0,
+--basics of response.
+local _reply_header = _base:new {
+    xid = 0, -- int
+    zxid = 0, -- long
+    err = 0, -- int
+    unpack = function(self, bytes)
+        self.xid, self.zxid, self.err = unpack(">ili", bytes)
+        return self
+    end
 }
+_M.reply_header = _reply_header;
 
 return _M

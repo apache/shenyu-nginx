@@ -23,9 +23,9 @@ local timeout = 60 * 1000
 local table_len = util.tlen
 local connects = {}
 
-function _M.new(self, zkconfig)
+function _M.new(self, zk_config)
     -- body
-    return setmetatable({ servers = zkconfig.servers, timeout = timeout }, mt)
+    return setmetatable({ servers = zk_config.servers, timeout = timeout }, mt)
 end
 
 function _M.connect(self)

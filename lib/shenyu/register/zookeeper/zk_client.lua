@@ -32,8 +32,7 @@ local mt = { __index = _M }
 local _timeout = 60 * 1000
 local pack = struct.pack
 local unpack = struct.unpack
-local connect_timeout = 60000000
---实例化一个zk客户端.
+--instantiate a zk client.
 function _M.new(self)
     local sock, err = tcp()
     if not tcp then
@@ -42,7 +41,7 @@ function _M.new(self)
     return setmetatable({ sock = sock, timeout = _timeout, watch = false }, mt)
 end
 
---连接zookeeper.
+--connect zookeeper.
 function _M.connect(self, host)
     local sock = self.sock
     if not sock then
@@ -82,14 +81,6 @@ function _M.connect(self, host)
     self.host = host
     self.session_id = sid
     return "OK"
-end
-
-function _M.keepalive(self)
-    local sock = self.sock
-    if not sock then
-        return nil, "not initialized"
-    end
-
 end
 
 function _M._rspLen(resp)
@@ -141,7 +132,6 @@ function _M._get_children(self, path, is_watch)
         return nil, "not initialized"
     end
     local path_len = strlen(path)
-    print("pathlen.,,,"..path_len)
     local h_len = 12 + path_len + 1
     local xid = self.xid + 1
     local req = pack(">iiiic" .. path_len .. "b", h_len, xid, const.ZOO_GET_CHILDREN, path_len, path, strbyte(is_watch))
@@ -156,20 +146,23 @@ function _M._get_children(self, path, is_watch)
         return bytes, err
     end
     local len = self._rspLen(bytes)
-    print("成功拿到数据,"..len)
     if len then
         bytes, err = self:_receive(len)
-        if strlen(bytes) > 16 then
-            local xid, zxid, err, count = unpack(">ilii", bytes)
-            self.xid = xid + 1
+        local d = proto.reply_header:unpack(bytes)
+        if d.err ~= 0 then
+            ngx_log(ngx.ERR, "zookeeper remote error: " .. const.get_err_msg(d.err) .. "," .. path)
+            return nil, const.get_err_msg(d.err)
+        end
+        if strlen(bytes) > 16 and d.xid > 0 then
+            self.xid = d.xid + 1
             local paths = unpack_strings(strsub(bytes, 21))
             return {
-                xid = xid,
-                zxid = zxid,
-                count = count,
+                xid = d.xid,
+                zxid = d.zxid,
                 path = paths
             }
-        else
+        end
+        if d.xid == const.XID_PING then
             goto continue
         end
     else
@@ -184,7 +177,6 @@ function _M.add_watch(self, path)
     if not sock then
         return nil, "not initialized"
     end
-    print("监听的path" ..path)
     local d, e = self:_get_children(path, 1)
     if not d then
         return d, e
@@ -215,7 +207,7 @@ local function reply_read(self, callback)
                 local xid, done, err, type, state = unpack(">iliii", bytes)
                 local eventPath = unpack_strings(strsub(bytes, 25))
                 local t = eventPath[1]
-                local d, e = self:add_watch(""..t)
+                local d, e = self:add_watch("" .. t)
                 if d then
                     callback(d.path)
                 end
@@ -231,7 +223,6 @@ function _M.watch_receive(self, callback)
         return nil, "not initialized"
     end
     local last_time = 0
-    print("监听起来啊。")
     while true do
         if exiting() then
             self:_close()
@@ -257,7 +248,6 @@ function _M._close(self)
     if not sock then
         return nil, "not initialized"
     end
-    print("关闭了吗？.......")
     return sock:close()
 end
 
