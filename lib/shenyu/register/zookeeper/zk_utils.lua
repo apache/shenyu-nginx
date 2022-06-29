@@ -16,30 +16,31 @@
 --
 local zk_cluster = require("shenyu.register.zookeeper.zk_cluster")
 local ngx_timer_at = ngx.timer.at
-
-local zc
+local xpcall = xpcall
+local ngx_log = ngx.log
+local zc;
 local _M = {}
-local function sync(premature)
-   local ok ,err =  zc:connect()
-    --if ok then
-    -- local co, err =  coroutine.create(zc:heartbeat())
-    --     if co then
-    --         coroutine.resume(co)
-    --     end
-    --end
-  print("......")
-  local data ,err =  zc:add_watch("/shenyu/registry");
-  print("......".. data)
+
+local function watch(path)
+    xpcall(zc:add_watch(path, function(f)
+        for i, v in ipairs(f) do
+            print("拿到数据了"..v)
+        end
+    end), function(err)
+        ngx_log(ngx.ERR, err)
+    end)
 end
 
-local function asyn_ping()
-    -- body
-    zc:heartbeat()
-
+local function sync(self, premature)
+    local ok, err = zc:connect()
+    if ok then
+        watch("/shenyu/registry")
+    end
+    print("......")
 end
 
 function _M.init()
-    zc = zk_cluster:newInst({ servers = {"127.0.0.1:2181"} })
-    ngx_timer_at(2,sync)
+    zc = zk_cluster:new({ servers = { "127.0.0.1:2181" } })
+    ngx_timer_at(2, sync)
 end
 return _M

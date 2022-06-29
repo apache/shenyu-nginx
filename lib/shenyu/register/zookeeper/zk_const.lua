@@ -18,6 +18,7 @@
 local _M = {}
 
 -- XID
+_M.XID_WATCH_EVENT = -1
 
 _M.XID_PING = -2
 
@@ -28,6 +29,8 @@ _M.XID_SET_WATCHES = -8
 _M.ZOO_GET_CHILDREN = 8;
 
 _M.ZOO_PING_OP = 11
+
+_M.ZOO_GET_CHILDREN2 = 12;
 
 _M.ZOO_SET_WATCHES = 101
 

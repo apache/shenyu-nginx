@@ -36,4 +36,9 @@ REQUEST_HEADER = {
     end
 }
 
+RSP_HEAD = {
+    len = 0,
+    xid = 0,
+}
+
 return _M

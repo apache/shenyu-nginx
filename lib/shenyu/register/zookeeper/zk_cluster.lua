@@ -18,14 +18,14 @@ local util = require("shenyu.register.core.utils")
 local ngx_log = ngx.log
 local ipairs = ipairs
 local _M = {}
-local mt = {__index = _M}
+local mt = { __index = _M }
 local timeout = 60 * 1000
 local table_len = util.tlen
 local connects = {}
 
-function _M.newInst(self, zkconfig)
+function _M.new(self, zkconfig)
     -- body
-    return setmetatable({servers = zkconfig.servers, timeout = timeout}, mt)
+    return setmetatable({ servers = zkconfig.servers, timeout = timeout }, mt)
 end
 
 function _M.connect(self)
@@ -36,55 +36,66 @@ function _M.connect(self)
     --    初始化
     local conn, err = zkclient:new()
     if not conn then
-        ngx_log(ngx.ERR, "初始化zkClient失败" .. err)
+        ngx_log(ngx.ERR, "Failed to initialize zk Client" .. err)
     end
-    conn:set_timeout(self.timeout)
+    conn:set_timeout(timeout)
     for _, _host in ipairs(servers) do
-        ngx_log(ngx.INFO, "尝试连接 zookeeper host : " .. _host)
+        ngx_log(ngx.INFO, "try to connect to zookeeper host : " .. _host)
         local ok, err = conn:connect(_host)
         if not ok then
-            ngx_log(ngx.INFO, "连接 zookeeper 失败 host : " .. _host .. err)
+            ngx_log(ngx.INFO, "Failed to connect to zookeeper host : " .. _host .. err)
         else
-            ngx_log(ngx.INFO, "连接 zookeeper 成功 host : " .. _host)
+            ngx_log(ngx.INFO, "Successful connection to zookeeper host : " .. _host)
             self.conn = conn
             return conn
         end
     end
-    ngx_log(ngx.ERR, "连接 zookeeper 失败")
+    ngx_log(ngx.ERR, "Failed to connect to zookeeper")
     return nil
 end
 
-function _M.heartbeat(self)
-    -- body
-    local ok, err = self.conn:keepalive()
-    if err then
-        -- 发生了错误
-        print("发送错误了......")
-    end
-end
-
 function _M.get_children(self, path)
-   local conn =  self.conn
-   if not conn then
-    ngx_log(ngx.ERR,"conn not initialized")
-   end
-   local data, error = conn:get_children(path)
-   if not data then
-    return nil, error
-   end
-   for _, value in ipairs(data) do
-    print("value:" .. value)
-   end
-   return data,nil
+    local conn = self.conn
+    if not conn then
+        ngx_log(ngx.ERR, "conn not initialized")
+    end
+    local data, error = conn:get_children(path)
+    if not data then
+        return nil, error
+    end
+    for _, value in ipairs(data) do
+        print("value:" .. value)
+    end
+    return data, nil
 end
 
-function _M.add_watch(self,path)
-    local conn =  self.conn
+local function _watch_receive(self, callback)
+    local conn = self.conn
     if not conn then
-        ngx_log(ngx.ERR,"conn not initialized")
+        ngx_log(ngx.ERR, "conn not initialized")
     end
-   local data, err =  conn:add_watch(path)
-    return data,err
+    return conn:watch_receive(callback)
+end
+
+function _M.add_watch(self, path, callback)
+    local conn = self.conn
+    if not conn then
+        ngx_log(ngx.ERR, "conn not initialized")
+    end
+    local data, err = conn:add_watch(path)
+    if data then
+        callback(data.path)
+        return _watch_receive(self, callback)
+    end
+    return data, err
+end
+
+function _M.set_keepalive(self)
+    local conn = self.conn
+    if not conn then
+        ngx_log(ngx.ERR, "conn not initialized")
+    end
+    return conn:set_keepalive()
 end
 
 return _M
