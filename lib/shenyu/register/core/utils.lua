@@ -23,7 +23,7 @@ function _M.paras_host(host, delimiter)
 end
 
 function _M.long_to_hex_string(long)
-    return string.format("0x%06x", long)
+    return string.format("0X%06X", long)
 end
 
 -- table len
