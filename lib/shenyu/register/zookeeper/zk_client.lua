@@ -155,7 +155,7 @@ local function reply_read(self, callback)
             -- local xid, done, err, type, state = unpack(">iliii", bytes)
             -- local eventPath = unpack_strings(strsub(bytes, 25))
             local t = watch_event.paths[1]
-            local d, e = self:add_watch("" .. t)
+            local d, e = self:add_watch(t)
             if d then
                 callback(d.path)
             end
