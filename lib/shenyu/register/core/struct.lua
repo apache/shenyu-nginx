@@ -19,9 +19,7 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
 ]]
-
 local unpack = table.unpack or _G.unpack
-
 local struct = {}
 
 function struct.pack(format, ...)
@@ -32,12 +30,12 @@ function struct.pack(format, ...)
   for i = 1, format:len() do
     local opt = format:sub(i, i)
 
-    if opt == '<' then
+    if opt == "<" then
       endianness = true
-    elseif opt == '>' then
+    elseif opt == ">" then
       endianness = false
-    elseif opt:find('[bBhHiIlL]') then
-      local n = opt:find('[hH]') and 2 or opt:find('[iI]') and 4 or opt:find('[lL]') and 8 or 1
+    elseif opt:find("[bBhHiIlL]") then
+      local n = opt:find("[hH]") and 2 or opt:find("[iI]") and 4 or opt:find("[lL]") and 8 or 1
       local val = tonumber(table.remove(vars, 1))
 
       local bytes = {}
@@ -51,7 +49,7 @@ function struct.pack(format, ...)
       else
         table.insert(stream, table.concat(bytes))
       end
-    elseif opt:find('[fd]') then
+    elseif opt:find("[fd]") then
       local val = tonumber(table.remove(vars, 1))
       local sign = 0
 
@@ -65,12 +63,12 @@ function struct.pack(format, ...)
         mantissa = 0
         exponent = 0
       else
-        mantissa = (mantissa * 2 - 1) * math.ldexp(0.5, (opt == 'd') and 53 or 24)
-        exponent = exponent + ((opt == 'd') and 1022 or 126)
+        mantissa = (mantissa * 2 - 1) * math.ldexp(0.5, (opt == "d") and 53 or 24)
+        exponent = exponent + ((opt == "d") and 1022 or 126)
       end
 
       local bytes = {}
-      if opt == 'd' then
+      if opt == "d" then
         val = mantissa
         for i = 1, 6 do
           table.insert(bytes, string.char(math.floor(val) % (2 ^ 8)))
@@ -83,8 +81,8 @@ function struct.pack(format, ...)
         val = math.floor(val / (2 ^ 8))
       end
 
-      table.insert(bytes, string.char(math.floor(exponent * ((opt == 'd') and 16 or 128) + val) % (2 ^ 8)))
-      val = math.floor((exponent * ((opt == 'd') and 16 or 128) + val) / (2 ^ 8))
+      table.insert(bytes, string.char(math.floor(exponent * ((opt == "d") and 16 or 128) + val) % (2 ^ 8)))
+      val = math.floor((exponent * ((opt == "d") and 16 or 128) + val) / (2 ^ 8))
       table.insert(bytes, string.char(math.floor(sign * 128 + val) % (2 ^ 8)))
       val = math.floor((sign * 128 + val) / (2 ^ 8))
 
@@ -93,18 +91,18 @@ function struct.pack(format, ...)
       else
         table.insert(stream, table.concat(bytes))
       end
-    elseif opt == 's' then
+    elseif opt == "s" then
       table.insert(stream, tostring(table.remove(vars, 1)))
       table.insert(stream, string.char(0))
-    elseif opt == 'c' then
-      local n = format:sub(i + 1):match('%d+')
+    elseif opt == "c" then
+      local n = format:sub(i + 1):match("%d+")
       local str = tostring(table.remove(vars, 1))
       local len = tonumber(n)
       if len <= 0 then
         len = str:len()
       end
       if len - str:len() > 0 then
-        str = str .. string.rep(' ', len - str:len())
+        str = str .. string.rep(" ", len - str:len())
       end
       table.insert(stream, str:sub(1, len))
       i = i + n:len()
@@ -122,12 +120,12 @@ function struct.unpack(format, stream, pos)
   for i = 1, format:len() do
     local opt = format:sub(i, i)
 
-    if opt == '<' then
+    if opt == "<" then
       endianness = true
-    elseif opt == '>' then
+    elseif opt == ">" then
       endianness = false
-    elseif opt:find('[bBhHiIlL]') then
-      local n = opt:find('[hH]') and 2 or opt:find('[iI]') and 4 or opt:find('[lL]') and 8 or 1
+    elseif opt:find("[bBhHiIlL]") then
+      local n = opt:find("[hH]") and 2 or opt:find("[iI]") and 4 or opt:find("[lL]") and 8 or 1
       local signed = opt:lower() == opt
 
       local val = 0
@@ -146,8 +144,8 @@ function struct.unpack(format, stream, pos)
       end
 
       table.insert(vars, math.floor(val))
-    elseif opt:find('[fd]') then
-      local n = (opt == 'd') and 8 or 4
+    elseif opt:find("[fd]") then
+      local n = (opt == "d") and 8 or 4
       local x = stream:sub(iterator, iterator + n - 1)
       iterator = iterator + n
 
@@ -156,7 +154,7 @@ function struct.unpack(format, stream, pos)
       end
 
       local sign = 1
-      local mantissa = string.byte(x, (opt == 'd') and 7 or 3) % ((opt == 'd') and 16 or 128)
+      local mantissa = string.byte(x, (opt == "d") and 7 or 3) % ((opt == "d") and 16 or 128)
       for i = n - 2, 1, -1 do
         mantissa = mantissa * (2 ^ 8) + string.byte(x, i)
       end
@@ -165,17 +163,19 @@ function struct.unpack(format, stream, pos)
         sign = -1
       end
 
-      local exponent = (string.byte(x, n) % 128) * ((opt == 'd') and 16 or 2) + math.floor(string.byte(x, n - 1) / ((opt == 'd') and 16 or 128))
+      local exponent =
+        (string.byte(x, n) % 128) * ((opt == "d") and 16 or 2) +
+        math.floor(string.byte(x, n - 1) / ((opt == "d") and 16 or 128))
       if exponent == 0 then
         table.insert(vars, 0.0)
       else
-        mantissa = (math.ldexp(mantissa, (opt == 'd') and -52 or -23) + 1) * sign
-        table.insert(vars, math.ldexp(mantissa, exponent - ((opt == 'd') and 1023 or 127)))
+        mantissa = (math.ldexp(mantissa, (opt == "d") and -52 or -23) + 1) * sign
+        table.insert(vars, math.ldexp(mantissa, exponent - ((opt == "d") and 1023 or 127)))
       end
-    elseif opt == 's' then
+    elseif opt == "s" then
       local bytes = {}
       for j = iterator, stream:len() do
-        if stream:sub(j,j) == string.char(0) or  stream:sub(j) == '' then
+        if stream:sub(j, j) == string.char(0) or stream:sub(j) == "" then
           break
         end
 
@@ -185,8 +185,8 @@ function struct.unpack(format, stream, pos)
       local str = table.concat(bytes)
       iterator = iterator + str:len() + 1
       table.insert(vars, str)
-    elseif opt == 'c' then
-      local n = format:sub(i + 1):match('%d+')
+    elseif opt == "c" then
+      local n = format:sub(i + 1):match("%d+")
       local len = tonumber(n)
       if len <= 0 then
         len = table.remove(vars)
@@ -198,6 +198,11 @@ function struct.unpack(format, stream, pos)
     end
   end
 
+  return vars, iterator
+end
+
+function struct.tbunpack(vars)
+  -- body
   return unpack(vars)
 end
 
