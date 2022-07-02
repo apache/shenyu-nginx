@@ -15,7 +15,6 @@
 -- limitations under the License.
 --
 local util = require("shenyu.register.core.utils")
-local struct = require("shenyu.register.core.struct")
 local const = require("shenyu.register.zookeeper.zk_const")
 local proto = require("shenyu.register.zookeeper.zk_proto")
 local connection = require("shenyu.register.zookeeper.connection")
@@ -102,7 +101,6 @@ function _M._get_children(self, path, is_watch)
     end
     --  If other data is received, it means that the data of the _get_children command has not been received
     ::continue::
-    -- 获取请求头.
     local rsp_header, bytes, end_index = conn:read_headler()
     if not rsp_header then
         return nil, "read headler error"
@@ -181,8 +179,6 @@ function _M.watch_receive(self, callback)
             end
             last_time = now()
         end
-        -- self:_receive1()
-        -- //表示200ms.
         sleep(0.2)
     end
 end
