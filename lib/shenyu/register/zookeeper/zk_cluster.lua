@@ -30,6 +30,7 @@ function _M.connect(self)
         return nil, "servers is null"
     end
     -- initialize
+    ---@type
     local client, err = zkclient:new()
     if not client then
         ngx_log(ngx.ERR, "Failed to initialize zk Client" .. err)

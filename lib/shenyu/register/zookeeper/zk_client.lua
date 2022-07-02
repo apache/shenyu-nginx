@@ -28,6 +28,7 @@ local _M = {}
 local mt = {__index = _M}
 
 function _M.new(self)
+    --- @type table
     local conn_, err = connection:new()
     if not conn_ then
         return nil, "initialized connection error" .. err
@@ -40,6 +41,7 @@ end
 function _M.connect(self, host)
     -- body
     local conn = self.conn
+    ---@type table
     local iptables = util.paras_host(host, ":")
     local ip = iptables[1]
     local port = iptables[2]
@@ -47,7 +49,7 @@ function _M.connect(self, host)
     if not byt then
         return nil, "connection error" .. host
     end
-    local bytes, err = proto:serialize(proto.request_header, proto.connect_request)
+    local bytes = proto:serialize(proto.request_header, proto.connect_request)
     local b, err = conn:write(bytes)
     if not b then
         return nil, "connect error " .. ip + ":" .. port
