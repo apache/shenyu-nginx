@@ -12,9 +12,9 @@ description = {
 }
 
 dependencies = {
-    "lua-resty-balancer >= 0.04-0",
+    "lua-resty-balancer >= 0.04",
     "lua-resty-http >= 0.15",
-    "lua-cjson = 2.1.0-1",
+    "lua-cjson = 2.1.0.6-1",
     "stringy = 0.7-0",
 }
 
