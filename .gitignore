@@ -29,3 +29,6 @@ logs/
 *.diff
 *.patch
 *.tmp
+
+/out/
+/.vscode/

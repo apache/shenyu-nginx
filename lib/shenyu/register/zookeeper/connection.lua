@@ -87,7 +87,7 @@ function _M.read_headler(self)
     return h, b, end_index
 end
 
-function _M.close()
+function _M.close(self)
     -- body
     local sock = self.sock
     if not sock then
