@@ -36,6 +36,7 @@ _M.ZOO_SET_WATCHES = 101
 
 _M.ZOO_ADD_WATCH = 106
 
+_M.ZK_WATCH_PATH = "/shenyu/register/instance";
 
 --Definition of error codes.
 local error_code = {

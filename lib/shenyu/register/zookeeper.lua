@@ -17,14 +17,43 @@
 local zk_cluster = require("shenyu.register.zookeeper.zk_cluster")
 local ngx_balancer = require("ngx.balancer")
 local balancer = require("shenyu.register.balancer")
+local const = require("shenyu.register.zookeeper.zk_const")
 local ngx_timer_at = ngx.timer.at
 local xpcall = xpcall
 local ngx_log = ngx.log
+local math = string.match
 local zc
-local _M = {}
+local _M = {
+    isload = 0,
+    nodes = {}
+}
 
 local function watch_data(data)
+    local server_lists = {}
     -- body
+    for index, value in ipairs(data) do
+        if math(value, ":") then
+            server_lists[value] = 1
+        end
+    end
+    local s_nodes = _M.nodes
+    for host, index in pairs(server_lists) do
+        if not s_nodes[host] then
+            ngx_log(ngx.INFO, "add shenyu server:" .. host)
+        end
+    end
+    for host, index in pairs(s_nodes) do
+        if not server_lists[host] then
+            ngx_log(ngx.INFO, "remove shenyu server:" .. host)
+        end
+    end
+    if (_M.isload > 1) then
+        _M.balancer:reinit(server_lists)
+    else
+        _M.balancer:init(server_lists)
+    end
+    _M.isload = _M.isload + 1
+    _M.nodes = server_lists
 end
 
 local function watch(premature, path)
@@ -47,11 +76,20 @@ function _M.init(config)
     zc = zk_cluster:new(config)
     if ngx.worker.id() == 0 then
         -- Start the zookeeper watcher
-        local ok, err = ngx_timer_at(2, watch, config.watch_path)
+        local ok, err = ngx_timer_at(2, watch, const.ZK_WATCH_PATH)
         if not ok then
-            ngx_log(ERR, "failed to start watch: " .. err)
+            ngx_log(ngx.ERR, "failed to start watch: " .. err)
         end
         return
     end
+end
+
+function _M.pick_and_set_peer(key)
+    local server = _M.balancer:find(key)
+    if not server then
+        ngx_log(ngx.ERR, "not find shenyu server..")
+        return
+    end
+    ngx_balancer.set_current_peer(server)
 end
 return _M

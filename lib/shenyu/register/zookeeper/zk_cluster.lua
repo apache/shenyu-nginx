@@ -59,9 +59,6 @@ function _M.get_children(self, path)
     if not data then
         return nil, error
     end
-    for _, value in ipairs(data) do
-        print("value:" .. value)
-    end
     return data, nil
 end
 
