@@ -75,6 +75,9 @@ for i = 1, #error_code do
 end
 
 function _M.get_err_msg(code)
+    if not code then
+        return "unknown"
+    end
     return error_msg["err" .. (code * -1)]
 end
 

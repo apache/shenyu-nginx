@@ -14,18 +14,14 @@
 -- See the License for the specific language governing permissions and
 -- limitations un
 local zkclient = require("shenyu.register.zookeeper.zk_client")
-local util = require("shenyu.register.core.utils")
 local ngx_log = ngx.log
 local ipairs = ipairs
 local _M = {}
-local mt = { __index = _M }
-local timeout = 60 * 1000
-local table_len = util.tlen
-local connects = {}
+local mt = {__index = _M}
 
 function _M.new(self, zk_config)
     -- body
-    return setmetatable({ servers = zk_config.servers, timeout = timeout }, mt)
+    return setmetatable({servers = zk_config.servers}, mt)
 end
 
 function _M.connect(self)
@@ -33,21 +29,21 @@ function _M.connect(self)
     if not servers then
         return nil, "servers is null"
     end
-    --    初始化
-    local conn, err = zkclient:new()
-    if not conn then
+    -- initialize
+    local client, err = zkclient:new()
+    if not client then
         ngx_log(ngx.ERR, "Failed to initialize zk Client" .. err)
+        return nil, err
     end
-    conn:set_timeout(timeout)
     for _, _host in ipairs(servers) do
         ngx_log(ngx.INFO, "try to connect to zookeeper host : " .. _host)
-        local ok, err = conn:connect(_host)
+        local ok, err = client:connect(_host)
         if not ok then
             ngx_log(ngx.INFO, "Failed to connect to zookeeper host : " .. _host .. err)
         else
             ngx_log(ngx.INFO, "Successful connection to zookeeper host : " .. _host)
-            self.conn = conn
-            return conn
+            self.client = client
+            return client
         end
     end
     ngx_log(ngx.ERR, "Failed to connect to zookeeper")
@@ -55,11 +51,11 @@ function _M.connect(self)
 end
 
 function _M.get_children(self, path)
-    local conn = self.conn
-    if not conn then
+    local client = self.client
+    if not client then
         ngx_log(ngx.ERR, "conn not initialized")
     end
-    local data, error = conn:get_children(path)
+    local data, error = client:get_children(path)
     if not data then
         return nil, error
     end
@@ -70,32 +66,24 @@ function _M.get_children(self, path)
 end
 
 local function _watch_receive(self, callback)
-    local conn = self.conn
-    if not conn then
+    local client = self.client
+    if not client then
         ngx_log(ngx.ERR, "conn not initialized")
     end
-    return conn:watch_receive(callback)
+    return client:watch_receive(callback)
 end
 
 function _M.add_watch(self, path, callback)
-    local conn = self.conn
-    if not conn then
+    local client = self.client
+    if not client then
         ngx_log(ngx.ERR, "conn not initialized")
     end
-    local data, err = conn:add_watch(path)
+    local data, err = client:add_watch(path)
     if data then
         callback(data.path)
         return _watch_receive(self, callback)
     end
     return data, err
-end
-
-function _M.set_keepalive(self)
-    local conn = self.conn
-    if not conn then
-        ngx_log(ngx.ERR, "conn not initialized")
-    end
-    return conn:set_keepalive()
 end
 
 return _M

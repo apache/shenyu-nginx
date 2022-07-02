@@ -15,28 +15,35 @@
 -- limitations under the License.
 --
 local zk_cluster = require("shenyu.register.zookeeper.zk_cluster")
+local ngx_balancer = require("ngx.balancer")
+local balancer = require("shenyu.register.balancer")
 local ngx_timer_at = ngx.timer.at
 local xpcall = xpcall
 local ngx_log = ngx.log
-local zc;
+local zc
 local _M = {}
 
+local function watch_data(data)
+    -- body
+end
+
 local function watch(premature, path)
-    print("一个好好的path" .. path)
     local ok, err = zc:connect()
     if ok then
-        ok, err = xpcall(zc:add_watch(path, function(f)
-            for i, v in ipairs(f) do
-                print("拿到数据了" .. v)
+        ok, err =
+            xpcall(
+            zc:add_watch(path, watch_data),
+            function(err)
+                ngx_log(ngx.ERR, "zookeeper start watch error..." .. tostring(err))
             end
-        end), function(err)
-            ngx_log(ngx.ERR, "zookeeper start watch error..." .. tostring(err))
-        end)
+        )
     end
     return ok, err
 end
 
 function _M.init(config)
+    _M.storage = config.shenyu_storage
+    _M.balancer = balancer.new(config.balancer_type)
     zc = zk_cluster:new(config)
     if ngx.worker.id() == 0 then
         -- Start the zookeeper watcher
