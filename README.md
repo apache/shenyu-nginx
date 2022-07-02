@@ -1,17 +1,15 @@
-incubator-shenyu-nginx(Experimental)
+Apache ShenYu Nginx Module(Experimental)
 ---
-
-ShenYu(Incubator) is High-Performance Java API Gateway. 
-
-In the cluster mode, Apache ShenYu supports the deployment of multiple ShenYu instances, which may have new instances joining or leaving at any time.
-Hence, Apache ShenYu introduces Service Discovery modules to help client to detect the available instances. 
-Currently, Apache ShenYu Bootstrap already supports Apache Zookeeper, Nacos, Etcd, and consul. Client or LoadBalancer can get the available ShenYu instances by those Service register center. 
 
 This module provided SDK to watch available ShenYu instance list as upstream nodes by Service Register Center for OpenResty.
 1. [ETCD](#greeting-etcd) (Supported)
 2. [Nacos](#greeting-nacos) (Supported)
 3. Zookeeper (TODO)
 4. Consul (TODO)
+
+In the cluster mode, Apache ShenYu supports the deployment of multiple ShenYu instances, which may have new instances joining or leaving at any time.
+Hence, Apache ShenYu introduces Service Discovery modules to help client to detect the available instances. 
+Currently, Apache ShenYu Bootstrap already supports Apache Zookeeper, Nacos, Etcd, and consul. Client or LoadBalancer can get the available ShenYu instances by those Service register center. 
 
 ## Getting Started
 
