@@ -14,7 +14,6 @@
 -- See the License for the specific language governing permissions and
 -- limitations under the License.
 --
-
 local _M = {}
 local str_null = string.char(0)
 
@@ -25,7 +24,6 @@ function _M.new(balancer_type)
             local servers, nodes = {}, {}
             for serv, weight in pairs(server_list) do
                 local id = string.gsub(serv, ":", str_null)
-
                 servers[id] = serv
                 nodes[id] = weight
             end
