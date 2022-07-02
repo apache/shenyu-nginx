@@ -24,8 +24,9 @@ local exiting = ngx.worker.exiting
 local sleep = ngx.sleep
 local strlen = string.len
 local _timeout = 60 * 1000
-local _M = {}
-local mt = {__index = _M}
+local _M = {
+}
+local mt = { __index = _M }
 
 function _M.new(self)
     --- @type table
@@ -35,7 +36,7 @@ function _M.new(self)
     end
     conn_:set_timeout(_timeout)
     conn_:set_keepalive()
-    return setmetatable({conn = conn_}, mt)
+    return setmetatable({ conn = conn_, children_listener = {} }, mt)
 end
 
 function _M.connect(self, host)
@@ -52,7 +53,7 @@ function _M.connect(self, host)
     local bytes = proto:serialize(proto.request_header, proto.connect_request)
     local b, err = conn:write(bytes)
     if not b then
-        return nil, "connect error " .. ip + ":" .. port
+        return nil, "connection error " .. ip + ":" .. port
     end
     local len = conn:read_len()
     if not len then
@@ -64,7 +65,7 @@ function _M.connect(self, host)
     end
     local rsp = proto.connect_response:unpack(bytes, 1)
     if not rsp then
-        return nil, "error"
+        return nil, "read connection response error"
     end
     self.xid = 0
     local t = rsp.timeout
@@ -72,10 +73,7 @@ function _M.connect(self, host)
     self.ping_time = (t / 3) / 1000
     self.host = host
     self.session_id = rsp.session_id
-    local tostring =
-        "proto_ver:" ..
-        rsp.proto_ver ..
-            "," .. "timeout:" .. rsp.timeout .. "," .. "session_id:" .. util.long_to_hex_string(rsp.session_id)
+    local tostring = "proto_ver:" .. rsp.proto_ver .. "," .. "timeout:" .. rsp.timeout .. "," .. "session_id:" .. util.long_to_hex_string(rsp.session_id)
     ngx_log(ngx.INFO, tostring)
     return true, nil
 end
@@ -102,8 +100,8 @@ function _M._get_children(self, path, is_watch)
         return bytes, "write bytes error"
     end
     --  If other data is received, it means that the data of the _get_children command has not been received
-    ::continue::
-    local rsp_header, bytes, end_index = conn:read_headler()
+    :: continue ::
+    local rsp_header, bytes, end_index = conn:read_header()
     if not rsp_header then
         return nil, "read headler error"
     end
@@ -121,22 +119,45 @@ function _M._get_children(self, path, is_watch)
         }
     end
     if rsp_header.xid == const.XID_PING then
-        goto continue
+        goto
+        continue
     end
     return nil, "get_children error"
 end
 
-function _M.add_watch(self, path)
+function _M.add_watch(self, path, listener)
     -- body
     local d, e = self:_get_children(path, 1)
     if not d then
         return d, e
     end
     self.watch = true
+    if not self.children_listener[path] then
+        self.children_listener[path] = listener
+    end
     return d, nil
 end
 
-local function reply_read(self, callback)
+local function watch_event(self, event)
+    if not event then
+        return
+    end
+    local type = event.type
+    local path = event.paths[1]
+    if type == const.WATCH_NODE_CHILDREN_CHANGE
+            or type == const.WATCH_NODE_CREATED
+            or type == const.WATCH_NODE_DELETED then
+        local listener = self.children_listener[path]
+        if listener then
+            local d, e = self:add_watch(path, listener)
+            if d then
+                listener(d.path)
+            end
+        end
+    end
+end
+
+local function reply_read(self)
     local conn = self.conn
     local h = proto.request_header
     h.xid = const.XID_PING
@@ -144,29 +165,23 @@ local function reply_read(self, callback)
     local req = proto:serialize(h, proto.ping_request)
     local ok, err = conn:write(req)
     if ok then
-        local h, bytes, end_start = conn:read_headler()
+        local h, bytes, end_start = conn:read_header()
         if h.xid == const.XID_PING then
             ngx_log(
-                ngx.DEBUG,
-                "Got ping zookeeper response host:" ..
-                    self.host .. " for sessionId:" .. util.long_to_hex_string(self.session_id)
+                    ngx.DEBUG,
+                    "Got ping zookeeper response host:" ..
+                            self.host .. " for sessionId:" .. util.long_to_hex_string(self.session_id)
             )
         elseif h.xid == const.XID_WATCH_EVENT then
             --decoding
-            local watch_event = proto.watch_event:unpack(bytes, end_start)
-            -- local xid, done, err, type, state = unpack(">iliii", bytes)
-            -- local eventPath = unpack_strings(strsub(bytes, 25))
-            local t = watch_event.paths[1]
-            local d, e = self:add_watch(t)
-            if d then
-                callback(d.path)
-            end
+            local data = proto.watch_event:unpack(bytes, end_start)
+            watch_event(self, data)
         end
     end
     return ok, err
 end
 
-function _M.watch_receive(self, callback)
+function _M.watch_receive(self)
     local last_time = 0
     while true do
         if exiting() then
@@ -175,7 +190,7 @@ function _M.watch_receive(self, callback)
         end
         local can_ping = now() - last_time > self.ping_time
         if can_ping then
-            local ok, err = reply_read(self, callback)
+            local ok, err = reply_read(self)
             if err then
                 return nil, err
             end
