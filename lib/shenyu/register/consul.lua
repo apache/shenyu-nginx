@@ -47,7 +47,7 @@ local function get_server_list()
 
     if res.status == 200 then
         local upstreams = {}
-        local kvs = json.decode(resp.body)
+        local kvs = json.decode(res.body)
 
         for _, v in ipairs(kvs) do
             local instanceId = ""
