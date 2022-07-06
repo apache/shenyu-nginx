@@ -15,9 +15,9 @@
 -- limitations under the License.
 --
 local zk_cluster = require("shenyu.register.zookeeper.zk_cluster")
-local ngx_balancer = require("ngx.balancer")
-local balancer = require("shenyu.register.balancer")
 local const = require("shenyu.register.zookeeper.zk_const")
+local balancer = require("shenyu.register.balancer")
+local ngx_balancer = require("ngx.balancer")
 local ngx_timer_at = ngx.timer.at
 local xpcall = xpcall
 local ngx_log = ngx.log
@@ -29,6 +29,7 @@ local _M = {
 }
 
 local function watch_data(data)
+    ---@type table
     local server_lists = {}
     -- body
     for index, value in ipairs(data) do
@@ -36,6 +37,7 @@ local function watch_data(data)
             server_lists[value] = 1
         end
     end
+    ---@type table
     local s_nodes = _M.nodes
     for host, index in pairs(server_lists) do
         if not s_nodes[host] then
