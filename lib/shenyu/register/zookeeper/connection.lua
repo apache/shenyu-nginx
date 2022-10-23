@@ -23,14 +23,14 @@ local tbunpack = struct.tbunpack
 local ngx_log = ngx.log
 local _timeout = 60 * 1000
 local _M = {}
-local mt = {__index = _M}
+local mt = { __index = _M }
 
 function _M.new(self)
     local sock, err = tcp()
     if not tcp then
         return nil, err
     end
-    return setmetatable({sock = sock, timeout = _timeout}, mt)
+    return setmetatable({ sock = sock, timeout = _timeout }, mt)
 end
 
 function _M.connect(self, ip, port)
@@ -74,7 +74,7 @@ function _M.read_len(self)
     return len
 end
 
-function _M.read_headler(self)
+function _M.read_header(self)
     local len = self:read_len()
     local b, err = self:read(len)
     if not b then
@@ -110,17 +110,16 @@ function _M.set_keepalive(self, ...)
     if not sock then
         return nil, "not initialized"
     end
-
+    
     return sock:setkeepalive(...)
 end
 
 function _M.set_timeouts(self, connect_timeout, send_timeout, read_timeout)
     local sock = self.sock
     if not sock then
-        error("not initialized", 2)
-        return
+        return nil, "not initialized"
     end
-
+    
     sock:settimeouts(connect_timeout, send_timeout, read_timeout)
 end
 

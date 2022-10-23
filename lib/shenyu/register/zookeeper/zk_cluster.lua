@@ -30,6 +30,7 @@ function _M.connect(self)
         return nil, "servers is null"
     end
     -- initialize
+    ---@type
     local client, err = zkclient:new()
     if not client then
         ngx_log(ngx.ERR, "Failed to initialize zk Client" .. err)
@@ -62,23 +63,23 @@ function _M.get_children(self, path)
     return data, nil
 end
 
-local function _watch_receive(self, callback)
+local function _watch_receive(self)
     local client = self.client
     if not client then
         ngx_log(ngx.ERR, "conn not initialized")
     end
-    return client:watch_receive(callback)
+    return client:watch_receive()
 end
 
-function _M.add_watch(self, path, callback)
+function _M.add_watch(self, path, listener)
     local client = self.client
     if not client then
         ngx_log(ngx.ERR, "conn not initialized")
     end
-    local data, err = client:add_watch(path)
+    local data, err = client:add_watch(path,listener)
     if data then
-        callback(data.path)
-        return _watch_receive(self, callback)
+        listener(data.path)
+        return _watch_receive(self)
     end
     return data, err
 end

@@ -17,7 +17,6 @@
 local table_insert          = table.insert
 local _M                    ={}
 
-
 function _M.split(str, delimiter)
     if not str or str == "" then return {} end
     if not delimiter or delimiter == "" then return { str } end
