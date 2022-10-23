@@ -16,68 +16,56 @@
 # See the License for the specific language governing permissions and
 # limitations under the License
 
+# 1: url, 2: condition, 3: message
+send() {
+  echo "send request to $1"
+  curl -s -D ./head -o response $1
+  rst=$(grep "$2" ./head)
+  if [[ -z "rst" ]]; then
+    echo "send $1 error: $3"
+    cat ./head
+    cat ./response
+    exit 100
+  fi
+}
 
-inst_addr_1=$(curl -s http://instance1:9090/get)
-if [[ -z "$inst_addr_1" ]]; then
-  echo "failed to start instance 1."
-  exit 129
-fi
+register() {
+  inst=$1
+  echo "${inst} registering..."
+  inst_addr=$(curl -s http://${inst}:9090/register)
+  if [[ -z "$inst_addr" ]]; then
+    echo "failed to start ${inst}."
+    exit 129
+  fi
+  echo "${inst} registered."
+}
 
-inst_addr_2=$(curl -s http://instance2:9090/get)
-if [[ -z "$inst_addr_2" ]]; then
-  echo "failed to start instance 2."
-  exit 129
-fi
+send "http://gateway:8080/get" "HTTP/1.1 500" "failed to set new environment for testing."
 
-rst=$(curl -Is http://gateway:8080/get | grep "HTTP/1.1 500")
-if [[ -z "$rst" ]]; then
-  echo "failed to set new environment for testing."
-  exit 128
-fi
-
-rst=$(curl -Is http://instance1:9090/register | grep "HTTP/1.1 200")
-echo $rst
-if [[ -z "$rst" ]]; then
-  echo "failed to register instance1 to etcd."
-  exit 128
-fi
-
-rst=$(curl -Is http://instance2:9090/register | grep "HTTP/1.1 200")
-echo $rst
-if [[ -z "$rst" ]]; then
-  echo "failed to register instance2 to etcd."
-  exit 128
-fi
+register "instance1"
+register "instance2"
 
 sleep 5
 
-curl -s http://gateway:8080/get
+send "http://instance1:9090/get" "HTTP/1.1 200" "failed to request instance1."
+send "http://instance2:9090/get" "HTTP/1.1 200" "failed to request instance2."
 
-rst=$(curl -Is http://gateway:8080/get | grep "HTTP/1.1 200")
-if [[ -z "$rst" ]]; then
-  echo "shenyu nginx module did not work."
-  exit 128
-fi
+send "http://gateway:8080/get" "HTTP/1.1 200" "shenyu nginx module did not work."
 
+echo "send requests to gateway."
 inst1=$(curl -s http://gateway:8080/get)
 inst2=$(curl -s http://gateway:8080/get)
-
-[[ "$inst1" == "$inst2" ]] || (echo "validation failed" && exit 128)
-
-# remove instance 1
-rst=$(curl -Is http://instance1:9090/unregister | grep "HTTP/1.1 200")
-if [[ -z "$rst" ]]; then
-  echo "failed to unregister instance1 to etcd."
+if [[ "$inst1" == "$inst2" ]]; then
+  echo "validation failed, inst1: ${inst1}, inst2: ${inst2}"
   exit 128
 fi
+
+# remove instance 1
+send "http://instance1:9090/unregister" "HTTP/1.1 200" "failed to unregister instance1 to register center."
 
 sleep 5
 
-rst=$(curl -Is http://gateway:8080/get | grep "HTTP/1.1 200")
-if [[ -z "$rst" ]]; then
-  echo "shenyu nginx module did not work right"
-  exit 128
-fi
+send "http://gateway:8080/get" "HTTP/1.1 200" "shenyu nginx module did not work right"
 
 rst=$(curl -s http://gateway:8080/get)
 if [[ "$rst" == "$inst_addr_1" ]]; then
@@ -91,3 +79,5 @@ if [[ "$rst" == "$inst_addr_1" ]]; then
 fi
 
 echo "validation successful"
+
+exit 200

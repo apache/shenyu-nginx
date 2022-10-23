@@ -83,7 +83,7 @@ local function parse_base_url(base_url)
         host = m[2],
         port = tonumber(m[3]),
         base_url = base_url,
-        prefix = detect_etcd_version(base_url),
+        prefix = detect_etcd_version(base_url)
     }
 end
 
@@ -95,14 +95,18 @@ end
 local function fetch_shenyu_instances(conf)
     local range_request = {
         key = encode_base64(_M.start_key),
-        range_end = encode_base64(_M.end_key),
+        range_end = encode_base64(_M.end_key)
     }
 
     local httpc = http.new()
-    local res, err = httpc:request_uri(conf.base_url .. conf.prefix .. "/kv/range", {
-        method = "POST",
-        body = json.encode(range_request),
-    })
+    local res, err =
+        httpc:request_uri(
+        conf.base_url .. conf.prefix .. "/kv/range",
+        {
+            method = "POST",
+            body = json.encode(range_request)
+        }
+    )
     if not res then
         return nil, "failed to list shenyu instances from etcd, " .. (err or "unknown")
     end
@@ -221,7 +225,7 @@ local function sync(premature)
     local lock = storage:get("_lock")
     local ver = storage:get("revision")
 
-    if lock and ver > _M.revision then
+    if not lock and ver > _M.revision then
         local server_list = storage:get("server_list")
         local servers = json.decode(server_list)
         if _M.revision <= 1 then
@@ -246,7 +250,7 @@ local function watch(premature, watching)
 
     if not watching then
         if not _M.etcd_conf then
-            _M.storage:set("_lock", false)
+            _M.storage:set("_lock", true)
 
             local conf, err = parse_base_url(_M.etcd_base_url)
             if not conf then
@@ -262,16 +266,19 @@ local function watch(premature, watching)
             _M.time_at = 3
         else
             watching = true
-            _M.storage:set("_lock", true)
+            _M.storage:set("_lock", false)
         end
     else
         local conf = _M.etcd_conf
         local httpc = http.new()
-        local ok, err = httpc:connect({
-            scheme = conf.scheme,
-            host = conf.host,
-            port = tonumber(conf.port),
-        })
+        local ok, err =
+            httpc:connect(
+            {
+                scheme = conf.scheme,
+                host = conf.host,
+                port = tonumber(conf.port)
+            }
+        )
         if not ok then
             log(ERR, "failed to connect to etcd server", err)
             _M.time_at = 3
@@ -292,15 +299,18 @@ local function watch(premature, watching)
             create_request = {
                 key = encode_base64(_M.start_key),
                 range_end = encode_base64(_M.end_key),
-                start_revision = _M.revision,
+                start_revision = _M.revision
             }
         }
 
-        local res, err = httpc:request({
-            path = "/v3/watch",
-            method = "POST",
-            body = json.encode(request),
-        })
+        local res, err =
+            httpc:request(
+            {
+                path = "/v3/watch",
+                method = "POST",
+                body = json.encode(request)
+            }
+        )
         if not res then
             log(ERR, "failed to watch keys under '/shenyu/register/instance/'", err)
             _M.time_at = 3
@@ -330,7 +340,7 @@ local function watch(premature, watching)
         end
     end
 
-    :: continue ::
+    ::continue::
     local ok, err = ngx_timer_at(_M.time_at, watch, watching)
     if not ok then
         log(ERR, "failed to start watch: ", err)

@@ -35,14 +35,15 @@ services:
 
   instance1:
     build:
-      context: ./mock-shenyu
+      context: ../../mock-shenyu
     expose:
       - 9090
     environment:
       - APP_NAME=mock-shenyu-instance-1
       - ETCD_SERVER_URL=http://172.16.238.10:2379
-    ports:
-      - 9090:9090
+    volumes:
+      - ./conf/mock-shenyu.conf:/var/run/nginx.conf
+    entrypoint: ["openresty", "-c", "/var/run/nginx.conf"]
     restart: on-failure
     healthcheck:
       test: [ "CMD", "bash", "-c", "cat < /dev/null > /dev/tcp/127.0.0.1/9090" ]
@@ -58,12 +59,15 @@ services:
 
   instance2:
     build:
-      context: ./mock-shenyu
+      context: ../../mock-shenyu
     expose:
       - 9090
     environment:
       - APP_NAME=mock-shenyu-instance-2
       - ETCD_SERVER_URL=http://172.16.238.10:2379
+    volumes:
+      - ./conf/mock-shenyu.conf:/var/run/nginx.conf
+    entrypoint: ["openresty", "-c", "/var/run/nginx.conf"]
     restart: on-failure
     healthcheck:
       test: [ "CMD", "bash", "-c", "cat < /dev/null > /dev/tcp/127.0.0.1/9090" ]
@@ -79,14 +83,13 @@ services:
 
   gateway:
     build:
-      context: ../..
+      context: ../../../..
       dockerfile: ./test/it/gateway/Dockerfile
-    ports:
-      - 8080:8080
-    volumes:
-      - ./gateway/conf:/conf
     environment:
       - ETCD_SERVER_URL=http://172.16.238.10:2379
+    volumes:
+      - ./conf/gateway.conf:/var/run/nginx.conf
+    entrypoint: ["openresty", "-c", "/var/run/nginx.conf"]
     restart: on-failure
     healthcheck:
       test: [ "CMD", "bash", "-c", "cat < /dev/null > /dev/tcp/127.0.0.1/8080" ]
@@ -102,7 +105,7 @@ services:
 
   consumer:
     build:
-      context: ../..
+      context: ../../../..
       dockerfile: ./test/it/consumer/Dockerfile
     depends_on:
       gateway:
