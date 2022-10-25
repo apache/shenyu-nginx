@@ -16,15 +16,15 @@
 --
 
 package = "shenyu-nginx"
-version = "main-0"
+version = "1.0.0-1"
 source = {
-   url = "https://github.com/apache/incubator-shenyu-nginx",
+   url = "https://github.com/apache/shenyu-nginx",
    branch = "main",
 }
 
 description = {
    summary = "Discovery Apache Shenyu servers for Nginx",
-   homepage = "https://github.com/apache/incubator-shenyu-nginx",
+   homepage = "https://github.com/apache/shenyu-nginx",
    license = "Apache License 2.0"
 }
 
