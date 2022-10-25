@@ -21,12 +21,12 @@ Currently, Apache ShenYu Bootstrap already supports Apache Zookeeper, Nacos, Etc
 
 The first, clone the source from GitHub.
 ```shell
-git clone https://github.com/apache/incubator-shenyu-nginx
+git clone https://github.com/apache/shenyu-nginx
 ```
 
 Then, build from source and install.
 ```shell
-cd incubator-shenyu-nginx
+cd shenyu-nginx
 luarocks make rockspec/shenyu-nginx-main-0.rockspec
 ```
 
@@ -67,9 +67,9 @@ Finally, restart OpenResty.
 openresty -s reload
 ```
 
-Here provides a completed [examples](https://github.com/apache/incubator-shenyu-nginx/tree/main/example).
+Here provides a completed [examples](https://github.com/apache/shenyu-nginx/tree/main/example).
 =======
-Here is a completed [example](https://github.com/apache/incubator-shenyu-nginx/blob/main/example/etcd/nginx.conf) working with ETCD.
+Here is a completed [example](https://github.com/apache/shenyu-nginx/blob/main/example/etcd/nginx.conf) working with ETCD.
 
 ### Greeting Nacos
 
@@ -109,7 +109,7 @@ Finally, restart OpenResty.
 openresty -s reload
 ```
 
-Here is a completed [example](https://github.com/apache/incubator-shenyu-nginx/blob/main/example/nacos/nginx.conf) working with Nacos.
+Here is a completed [example](https://github.com/apache/shenyu-nginx/blob/main/example/nacos/nginx.conf) working with Nacos.
 
 ## Greeting Zookeeper 
 Modify the Nginx configure, create and initialize the ShenYu register to connect to target register center.
@@ -140,7 +140,7 @@ Finally, restart OpenResty.
 ```shell
 openresty -s reload
 ```
-Here is a completed [example](https://github.com/apache/incubator-shenyu-nginx/blob/main/example/zookeeper/nginx.conf) working with Zookeeper.
+Here is a completed [example](https://github.com/apache/shenyu-nginx/blob/main/example/zookeeper/nginx.conf) working with Zookeeper.
 
 ## Contributor and Support
 
