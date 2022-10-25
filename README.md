@@ -27,7 +27,7 @@ git clone https://github.com/apache/shenyu-nginx
 Then, build from source and install.
 ```shell
 cd shenyu-nginx
-luarocks make rockspec/shenyu-nginx-main-0.rockspec
+luarocks make rockspec/shenyu-nginx-1.0.0-1.rockspec
 ```
 
 ### Greeting ETCD

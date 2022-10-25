@@ -21,4 +21,4 @@ WORKDIR /shenyu-nginx
 COPY ./lib lib
 COPY ./rockspec rockspec
 
-RUN luarocks make ./rockspec/shenyu-nginx-main-0.rockspec
+RUN luarocks make ./rockspec/shenyu-nginx-1.0.0-1.rockspec
