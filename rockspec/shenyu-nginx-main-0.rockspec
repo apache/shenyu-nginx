@@ -16,7 +16,7 @@
 --
 
 package = "shenyu-nginx"
-version = "main-0"
+version = "1.0.0"
 source = {
    url = "https://github.com/apache/incubator-shenyu-nginx",
    branch = "main",
