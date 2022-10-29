@@ -19,33 +19,30 @@ local _M = {}
 
 -- XID
 _M.XID_WATCH_EVENT = -1
-
 _M.XID_PING = -2
-
 _M.XID_SET_WATCHES = -8
-
 --op code
-
 _M.ZOO_GET_CHILDREN = 8
-
 _M.ZOO_PING_OP = 11
-
 _M.ZOO_GET_CHILDREN2 = 12
-
 _M.ZOO_SET_WATCHES = 101
-
 _M.ZOO_ADD_WATCH = 106
-
+--watch type
+_M.WATCH_NONE = -1
+_M.WATCH_NODE_CREATED = 1
+_M.WATCH_NODE_DELETED = 2
+_M.WATCH_NODE_DATA_CHANGE = 3
+_M.WATCH_NODE_CHILDREN_CHANGE = 4
+_M.WATCH_DATA_WATCH_REMOVE = 5
+_M.WATCH_CHILD_WATCH_REMOVE = 6
+--cus const.
 _M.ZK_WATCH_PATH = "/shenyu/register/instance";
-
 --Definition of error codes.
 local error_code = {
     "0", "-1", "-2", "-3", "-4", "-5", "-6", "-7", "-8", "-100",
     "-101", "-102", "-103", "-108", "-110", "-111", "-112",
     "-113", "-114", "-115", "-118", "-119" }
-
-
---errorcode
+--err message.
 local error_msg = {
     err0 = "Ok",
     err1 = "System error",
