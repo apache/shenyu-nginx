@@ -41,6 +41,7 @@ build = {
       ["shenyu.register.etcd"] = "lib/shenyu/register/etcd.lua",
       ["shenyu.register.nacos"] = "lib/shenyu/register/nacos.lua",
       ["shenyu.register.balancer"] = "lib/shenyu/register/balancer.lua",
+      ["shenyu.register.consul"] = "lib/shenyu/register/consul.lua",
       ["shenyu.register.zookeeper"] = "lib/shenyu/register/zookeeper.lua",
       ["shenyu.register.zookeeper.connection"] = "lib/shenyu/register/zookeeper/connection.lua",
       ["shenyu.register.zookeeper.zk_client"] = "lib/shenyu/register/zookeeper/zk_client.lua",
