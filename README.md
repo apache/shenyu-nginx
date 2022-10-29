@@ -1,4 +1,4 @@
-Apache ShenYu Nginx Module(Experimental)
+Apache ShenYu Nginx Module
 ---
 
 This module provided SDK to watch available ShenYu instance list as upstream nodes by Service Register Center for OpenResty.
@@ -140,7 +140,7 @@ Listen for changes to the node via the consul watch event. Here is an example of
 init_worker_by_lua_block {
     local register = require "shenyu.register.consul";
     register.init({
-        uri = "http://192.168.152.128:8500",
+        uri = "http://127.0.0.1:8500",
         path = "/v1/catalog/service/demo",
         shenyu_storage = ngx.shared.shenyu_storage,
         balancer_type = "chash",
