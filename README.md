@@ -1,4 +1,4 @@
-Apache ShenYu Nginx Module(Experimental)
+Apache ShenYu Nginx Module
 ---
 
 This module provided SDK to watch available ShenYu instance list as upstream nodes by Service Register Center for OpenResty.
